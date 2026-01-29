@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fractal Raymarcher</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+        
+        body, html { 
+            margin: 0; 
+            padding: 0; 
+            width: 100vw; 
+            height: 100vh; 
+            overflow: hidden; 
+            background: linear-gradient(135deg, #0a0a12 0%, #12121e 100%);
+            font-family: 'Inter', sans-serif; 
+            color: white;
+        }
+
+        .main-layout {
+            display: flex;
+            width: 100vw;
+            height: 100vh;
+            padding: 32px;
+            box-sizing: border-box;
+            gap: 24px;
+        }
+
+        .canvas-section {
+            flex: 1; 
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .main-title {
+            color: #fff;
+            font-size: 32px;
+            font-weight: 800;
+            line-height: 1.1;
+            letter-spacing: -0.5px;
+        }
+
+        .title-accent {
+            background: linear-gradient(135deg, #ff40a0 0%, #ff6b9d 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .version-badge {
+            background: rgba(255, 64, 160, 0.15);
+            border: 1px solid rgba(255, 64, 160, 0.3);
+            color: #ff40a0;
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .canvas-centering-box {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            border: 1px solid rgba(255,255,255,0.06);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .canvas-centering-box::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255, 64, 160, 0.08) 0%, transparent 70%);
+            pointer-events: none;
+        }
+
+        #gfx-main {
+            width: 1000px; 
+            height: 1000px;
+            background: #000;
+            border: 2px solid rgba(255, 64, 160, 0.2);
+            box-shadow: 0 30px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255, 64, 160, 0.15);
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sidebar-section {
+            width: 380px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            flex-shrink: 0;
+        }
+
+        .panel {
+            background: rgba(18, 18, 30, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 16px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+            transition: border-color 0.3s ease;
+        }
+
+        .panel:hover {
+            border-color: rgba(255, 64, 160, 0.15);
+        }
+
+        .panel-title {
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .panel-title::before {
+            content: '';
+            width: 3px;
+            height: 14px;
+            background: linear-gradient(180deg, #ff40a0 0%, #ff6b9d 100%);
+            border-radius: 2px;
+        }
+
+        .fractal-panel {
+            flex: 1;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .scroll-content {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+
+        .custom-select { 
+            width: 100%; 
+            padding: 12px 14px; 
+            background: rgba(10, 10, 20, 0.8); 
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            color: #eee; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            font-size: 12px; 
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-appearance: none;
+            appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23ff40a0' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 14px center;
+            padding-right: 40px;
+        }
+
+        .custom-select:hover {
+            border-color: rgba(255, 64, 160, 0.3);
+            background: rgba(15, 15, 25, 0.9);
+        }
+
+        .custom-select:focus {
+            outline: none;
+            border-color: #ff40a0;
+            box-shadow: 0 0 0 3px rgba(255, 64, 160, 0.1);
+        }
+
+        .section-label {
+            font-size: 10px;
+            color: #999;
+            margin-bottom: 14px;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .section-label:first-of-type {
+            margin-top: 0;
+        }
+
+        .slider-group { 
+            margin-bottom: 18px; 
+        }
+
+        .slider-header { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 11px; 
+            margin-bottom: 8px; 
+            color: #bbb;
+            font-weight: 500;
+        }
+
+        .slider-value {
+            color: #ff40a0;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+        }
+
+        input[type=range] { 
+            width: 100%; 
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #ff40a0 0%, #ff6b9d 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(255, 64, 160, 0.4);
+            transition: transform 0.2s ease;
+        }
+
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        input[type=range]::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            background: linear-gradient(135deg, #ff40a0 0%, #ff6b9d 100%);
+            border-radius: 50%;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 8px rgba(255, 64, 160, 0.4);
+        }
+
+        .section-divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.1) 50%, transparent 100%);
+            margin: 20px 0;
+        }
+
+        .stats-panel {
+            min-height: 200px;
+        }
+
+        .stat-row { 
+            display: flex; 
+            justify-content: space-between; 
+            font-size: 12px; 
+            margin-bottom: 10px; 
+            font-family: 'JetBrains Mono', monospace;
+            padding: 8px 12px;
+            background: rgba(10, 10, 20, 0.4);
+            border-radius: 6px;
+            border-left: 2px solid rgba(255, 64, 160, 0.3);
+        }
+
+        .stat-label { 
+            color: #999; 
+            font-weight: 500;
+        }
+
+        .stat-value { 
+            color: #ff40a0; 
+            font-weight: 600;
+        }
+
+        .action-button { 
+            width: 100%; 
+            padding: 12px; 
+            background: rgba(20, 20, 35, 0.6); 
+            border: 1px solid rgba(255, 64, 160, 0.3); 
+            color: #ff40a0; 
+            border-radius: 8px; 
+            font-size: 11px; 
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 16px;
+        }
+
+        .action-button:hover { 
+            background: linear-gradient(135deg, #ff40a0 0%, #ff6b9d 100%); 
+            color: white; 
+            border-color: transparent;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 64, 160, 0.3);
+        }
+
+        .action-button:active {
+            transform: translateY(0);
+        }
+
+        .info-note {
+            font-size: 10px;
+            color: #666;
+            font-style: italic;
+            margin-top: 8px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 6px;
+            border-left: 2px solid rgba(255, 64, 160, 0.2);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.2); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 64, 160, 0.4); border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255, 64, 160, 0.6); }
+    </style>
+</head>
+<body>
+    <div class="main-layout">
+        <!-- LEFT SECTION - Canvas -->
+        <div class="canvas-section">
+            <div class="header-container">
+                <div class="main-title">
+                    <span class="title-accent">Fractal</span><br>Raymarcher
+                </div>
+                <div class="version-badge">REALTIME</div>
+            </div>
+            <div class="canvas-centering-box">
+                <canvas id="gfx-main" width="1000" height="1000"></canvas>
+            </div>
+        </div>
+
+        <!-- RIGHT SECTION - Controls -->
+        <div class="sidebar-section">
+            <!-- Fractal Controls Panel -->
+            <div class="panel fractal-panel">
+                <div class="panel-title">Fractal Control</div>
+
+                <select id="fractal-select" class="custom-select">
+                    <option value="0">Fractal DE</option>
+                    <option value="1">Fractal DE1</option>
+                    <option value="2">Fractal DE2</option>
+                    <option value="3" selected>Fractal DE3</option>
+                    <option value="4">Fractal DE4</option>
+                </select>
+
+                <div class="scroll-content">
+                    <!-- Fractal Properties -->
+                    <div class="section-label">DE3 Parameters</div>
+                    
+                    <div class="info-note">
+                        Note: Sliders only affect DE3 fractal
+                    </div>
+                    
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Iterations</span>
+                            <span class="slider-value" id="iterations-value">7</span>
+                        </div>
+                        <input type="range" id="iterations" min="3" max="12" step="1" value="7">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Fold Scale</span>
+                            <span class="slider-value" id="fold-scale-value">3.0</span>
+                        </div>
+                        <input type="range" id="fold-scale" min="2.0" max="4.0" step="0.1" value="3.0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Offset X</span>
+                            <span class="slider-value" id="offset-x-value">2.0</span>
+                        </div>
+                        <input type="range" id="offset-x" min="0.5" max="5.0" step="0.1" value="2.0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Offset Y</span>
+                            <span class="slider-value" id="offset-y-value">0.0</span>
+                        </div>
+                        <input type="range" id="offset-y" min="-2.0" max="2.0" step="0.1" value="0.0">
+                    </div>
+
+                    <div class="slider-group">
+                        <div class="slider-header">
+                            <span>Offset Z</span>
+                            <span class="slider-value" id="offset-z-value">5.0</span>
+                        </div>
+                        <input type="range" id="offset-z" min="2.0" max="8.0" step="0.1" value="5.0">
+                    </div>
+
+                    <div class="section-divider"></div>
+
+                    <div class="section-label">Scene Control</div>
+
+                    <button id="refresh-lights" class="action-button">
+                        🔄 Refresh Light Positions
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats Panel -->
+            <div class="panel stats-panel">
+                <div class="panel-title">Statistics</div>
+                
+                <div class="stat-row">
+                    <span class="stat-label">FPS</span>
+                    <span class="stat-value" id="fps-display">60</span>
+                </div>
+                
+                <div class="stat-row">
+                    <span class="stat-label">Frame Time</span>
+                    <span class="stat-value" id="frametime-display">16.6ms</span>
+                </div>
+
+                <div class="stat-row">
+                    <span class="stat-label">Active Fractal</span>
+                    <span class="stat-value" id="fractal-display">DE3</span>
+                </div>
+
+                <div class="stat-row">
+                    <span class="stat-label">Samples</span>
+                    <span class="stat-value" id="samples-display">0</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dist/main.js"></script>
+</body>
+</html>
